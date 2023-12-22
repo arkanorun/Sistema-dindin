@@ -1,21 +1,20 @@
-const extratoTrans = (req, res) => {
-    const responseIntermediario = req.resposta;
+const extratoTrans = async (req, res) => {
+    const { id } = req.usuario
 
-    const somaEntradas = responseIntermediario
-        .filter((transacao) => transacao.tipo === "entrada")
-        .reduce((accumulador, transacao) => accumulador + transacao.valor, 0)
+    try {
+        const extrato = await pool.query(`select sum(valor) as entrada, (select sum(valor) as 
+        saida from transacoes where usuario_id = $1 and tipo = $2) as saida from transacoes where
+        usuario_id = $1 and tipo = $3`, [id, "saida", "entrada"])
 
-    const somaSaidas = responseIntermediario
-        .filter((transacao) => transacao.tipo === "saida")
-        .reduce((accumulador, transacao) => accumulador + transacao.valor, 0)
-    const entrada = somaEntradas !== 0 ? somaEntradas : 0
-    const saida = somaSaidas !== 0 ? somaSaidas : 0
-    const okResposta = {
-        entrada,
-        saida
-    };
+        return res.json({
+            entrada: Number(extrato.rows[0].entrada),
+            saida: Number(extrato.rows[0].saida)
+        })
 
-    return res.status(200).json(okResposta);
-};
+    } catch (error) {
+        return res.status(500).json({ mensagem: error.message })
+
+    }
+}
 
 module.exports = extratoTrans;
